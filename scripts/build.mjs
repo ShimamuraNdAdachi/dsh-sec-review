@@ -43,13 +43,57 @@ function replaceOnce(source, needle, replacement, label) {
   return after
 }
 
+/**
+ * The plugin's own dataset fingerprint, mirrored here so the build can print the
+ * value an activated instance must report. Keep in step with
+ * `fingerprint()` in `preset/plugin/security-review.mjs`.
+ * @param {string} text - the text to fingerprint.
+ * @returns {string} eight lowercase hexadecimal digits.
+ */
+function fingerprint(text) {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
 const prompts = JSON.parse(readFileSync(resolve(PROJECT, 'src/prompts.json'), 'utf8'))
 const moduleSource = readFileSync(resolve(PROJECT, 'preset/plugin/security-review.mjs'), 'utf8')
+
+// The runtime fingerprints the canonical compact serialization, so this must use
+// the same round-trip rather than the file's pretty-printed bytes.
+const dataFingerprint = fingerprint(JSON.stringify(prompts))
+
+/** Source characters per emitted chunk; escaping stays well inside one line. */
+const CHUNK_SIZE = 500
+
+/**
+ * Emit the prompt dataset as an array of short string chunks joined at runtime.
+ *
+ * A single `JSON.stringify` line is ~30 KB, which no editor, diff, or
+ * read-with-truncation tool can hand back intact — and this file's whole purpose
+ * is to be copied into `cordis_define` by hand. Concatenating small chunks
+ * reconstructs the *identical* compact JSON, so the runtime fingerprint still
+ * matches `dataFingerprint`.
+ * @param {unknown} value - the parsed prompt dataset.
+ * @returns {string} a `const PROMPTS = JSON.parse([...].join(''))` statement.
+ */
+function emitPromptData(value) {
+  const compact = JSON.stringify(value)
+  const lines = []
+  for (let index = 0; index < compact.length; index += CHUNK_SIZE) {
+    lines.push(`  ${JSON.stringify(compact.slice(index, index + CHUNK_SIZE))},`)
+  }
+  return `const PROMPTS = JSON.parse([\n${lines.join('\n')}\n].join(''))\n\n`
+}
 
 // ── preset/plugin/prompts.mjs ───────────────────────────────────────────────
 
 const promptsModule = `// ${GENERATED}\n`
-  + `// Source: src/prompts.json (extracted from VulnHuntr vulnhuntr/prompts.py, sha256 ${prompts.sourceSha256}).\n\n`
+  + `// Source: src/prompts.json (extracted from VulnHuntr vulnhuntr/prompts.py, sha256 ${prompts.sourceSha256}).\n`
+  + `// Dataset fingerprint reported at runtime: ${dataFingerprint}\n\n`
   + `export const PROMPTS = ${JSON.stringify(prompts, null, 2)}\n`
 const promptsPath = resolve(PROJECT, 'preset/plugin/prompts.mjs')
 mkdirSync(dirname(promptsPath), { recursive: true })
@@ -75,8 +119,9 @@ const dynamicSource = `// ${GENERATED}\n`
   + "// `cordis_define` as `code.host`, then activate the returned package with\n"
   + '// `cordis_run`. It needs no approval flow of its own and no preset install.\n'
   + '//\n'
-  + `// Derived from preset/plugin/security-review.mjs (prompt data sha256 ${prompts.sourceSha256}).\n\n`
-  + `const PROMPTS = ${JSON.stringify(prompts)}\n\n`
+  + `// Derived from preset/plugin/security-review.mjs (prompt data sha256 ${prompts.sourceSha256}).\n`
+  + `// Dataset fingerprint this half must report: ${dataFingerprint}\n\n`
+  + emitPromptData(prompts)
   + body
   + '\nreturn { name, inject, apply }\n'
 const dynamicPath = resolve(PROJECT, 'dynamic/host.js')
@@ -85,3 +130,4 @@ writeFileSync(dynamicPath, dynamicSource, 'utf8')
 
 console.log(`wrote ${promptsPath} (${promptsModule.length} chars)`)
 console.log(`wrote ${dynamicPath} (${dynamicSource.length} chars)`)
+console.log(`dataset fingerprint: ${dataFingerprint} — \`sec_review_methodology\` must report this value`)

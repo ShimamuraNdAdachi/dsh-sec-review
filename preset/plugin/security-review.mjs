@@ -32,6 +32,29 @@ export const inject = ['tools', 'systemPrompt']
 const VULN_TYPES = PROMPTS.vulnerabilityClasses
 
 /**
+ * 32-bit FNV-1a over a UTF-16 string.
+ *
+ * The generated dynamic Host half carries its own copy of the prompt data, so
+ * an instance must be able to state which dataset it is actually serving: the
+ * build prints the expected value, and this one is reported by
+ * `sec_review_methodology`'s index. `scripts/build.mjs` mirrors this function
+ * and computes the same value from `src/prompts.json`.
+ * @param {string} text - the text to fingerprint.
+ * @returns {string} eight lowercase hexadecimal digits.
+ */
+function fingerprint(text) {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
+/** Identity of the prompt dataset this instance serves. */
+const DATA_FINGERPRINT = fingerprint(JSON.stringify(PROMPTS))
+
+/**
  * Section placement. `TOOL_REPORT` is 2900 in the system-prompt registry's own
  * table; a literal keeps this module import-free, and the registry tolerates
  * any finite order as long as the section name is unique.
@@ -243,6 +266,7 @@ function defineTools(bucketFor) {
             + METHODOLOGY_INDEX.map(([key, variable, purpose]) => `- \`${key}\` (${variable}) — ${purpose}`).join('\n')
             + '\n- `report` — the consolidated report shape a `sec_review_finding` record maps onto.\n'
             + '\nCall `sec_review_methodology` with one part, or with `part: "all"` for everything.\n'
+            + `\nPrompt dataset: fingerprint \`${DATA_FINGERPRINT}\`, extracted from upstream prompts.py \`${PROMPTS.sourceSha256}\`.\n`
         }
         if (part === 'report') {
           return section('Upstream report shape', REPORT_SHAPE)

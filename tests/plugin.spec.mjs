@@ -20,6 +20,26 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 const PROJECT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /**
+ * The plugin's dataset fingerprint, mirrored so the tests can assert that BOTH
+ * halves report the dataset committed in `src/prompts.json`. For the generated
+ * dynamic half this is an integrity check on the data the build inlined.
+ * @param {string} text - the text to fingerprint.
+ * @returns {string} eight lowercase hexadecimal digits.
+ */
+function fingerprint(text) {
+  let hash = 0x811c9dc5
+  for (let i = 0; i < text.length; i += 1) {
+    hash ^= text.charCodeAt(i)
+    hash = Math.imul(hash, 0x01000193) >>> 0
+  }
+  return hash.toString(16).padStart(8, '0')
+}
+
+const EXPECTED_FINGERPRINT = fingerprint(
+  JSON.stringify(JSON.parse(readFileSync(resolve(PROJECT, 'src/prompts.json'), 'utf8'))),
+)
+
+/**
  * Build a stand-in Cordis context recording every registration.
  * @returns {{ ctx: object, sections: object[], tools: Map<string, object> }} the fake context and its records.
  */
@@ -159,6 +179,9 @@ for (const [label, mount] of [['preset module', mountPresetPlugin], ['dynamic ha
       const index = await tool.execute({})
       assert.match(index, /INITIAL_ANALYSIS_PROMPT_TEMPLATE/)
       assert.match(index, /SYS_PROMPT_TEMPLATE/)
+      // The index must identify the served dataset: for the generated dynamic
+      // half this is what proves its inlined prompt data is uncorrupted.
+      assert.match(index, new RegExp(`fingerprint \`${EXPECTED_FINGERPRINT}\``))
       const system = await tool.execute({ part: 'system' })
       assert.match(system, /world's foremost expert in Python security analysis/)
       const all = await tool.execute({ part: 'all' })
