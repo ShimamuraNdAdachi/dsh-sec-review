@@ -1,0 +1,2 @@
+name: 代码安全审计 (VulnHuntr)
+description: 基于 VulnHuntr 提示词的远程漏洞静态审计 Agent：内置 LFI/RCE/XSS/AFO/SSRF/SQLI/IDOR 七类分析模板、绕过示例与结构化报告工具，并保留完整的编码与检索能力。

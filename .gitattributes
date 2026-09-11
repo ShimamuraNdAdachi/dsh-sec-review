@@ -1,0 +1,4 @@
+# Keep every text file LF in the working tree on every platform: the extracted
+# prompt payload and the generated artifacts are produced with LF endings, so a
+# checkout that rewrote them to CRLF would make a rebuild look like an edit.
+* text=auto eol=lf
