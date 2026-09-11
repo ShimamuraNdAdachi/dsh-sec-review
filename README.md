@@ -92,6 +92,39 @@ node scripts/sync-preset.mjs <path-to-standard/agent.cordis.yml>   # 重新同�
 
 无需 `npm install`：全部脚本只用 Node 内置模块，测试用内置 `node:test`。
 
+## DSH 升级 / 删除根目录重新构建之后
+
+先分清三个东西各自放在哪里：
+
+| 东西 | 位置 | 重建 DSH 根目录之后 |
+| --- | --- | --- |
+| 本项目（**唯一真源**） | 工作区里的 `dsh-sec-review/`，独立 git 仓库 | **不受影响**（不在 DSH 目录内） |
+| 已安装的 Agent 预设 | `%DSH_HOME%\.agent-presets\security-review\`（默认 `C:\Users\<你>\.dsh`，**不在** DSH 根目录内） | 只要升级没有连 `%DSH_HOME%` 一起清掉，就**保留** |
+| 动态插件（`cordis_define` 激活的那份） | 只存在于当前进程内存 | **任何一次重启都会消失**，与升级无关 |
+
+所以：**插件不会因为重建 DSH 根目录而丢失** —— 它的本体（`preset/`、`src/`、脚本）在 DSH 目录之外，安装位置在 `%DSH_HOME%` 下；而 DSH 根目录里**没有本项目的任何文件**（我全程只读取过它）。真正要留意的是两点：
+
+1. **`preset/agent.cordis.yml` 是官方 `standard` 组合的版本快照。** 升级后 `standard` 可能新增、改名或删除行，旧快照会出现「Cannot find package …」「invalid config …」或某行不激活。重新同步即可：
+
+   ```powershell
+   node scripts/sync-preset.mjs <新 DSH 根>\packages\preset\agent-presets\presets\standard\agent.cordis.yml
+   npm run build
+   npm run install-preset -- --force
+   ```
+
+   同步脚本会校验目标确实是 `standard` 组合、且尚未包含本插件的行，所以重复执行是安全的。
+
+2. **如果升级流程连 `%DSH_HOME%` 一起清掉**（那会同时丢掉会话、凭据、设置），预设也没了，从仓库重装即可：
+
+   ```powershell
+   npm run build            # 需要时；只影响生成物
+   npm run install-preset   # 把 preset/ 复制到 %DSH_HOME%\.agent-presets\security-review\
+   ```
+
+   `src/prompts.json` 是**已提交的提示词数据**，所以即使上游 `../vulnhuntr/`（Python 源码）被删除，`build` / `test` / `install-preset` 依旧可用；只有 `npm run extract` 需要那份上游源码。预设只对新会话生效，重装后新开一个会话确认「代码安全审计 (VulnHuntr)」出现在选择器里即可。
+
+> 建议把本仓库推到远端（或至少备份）：它才是真源，`%DSH_HOME%` 里那份只是安装产物；更新流程也无法在 DSH 根目录内放任何属于本项目的东西（那会被下一次重建覆盖）。
+
 ## 设计说明
 
 - **为什么插件模块零依赖？** 用户自建预设位于 `~/.dsh/.agent-presets/`，Node 的 `node_modules` 向上查找到不了已安装的 harness，任何 `@deepseek-ai/dsh-*` 裸导入在挂载时都会失败。因此插件只通过 `ctx.get()` / `ctx.<service>` 拿能力，工具 schema 直接写成**原始 JSON Schema**，而不是第一方包使用的 `defineTool` 授权 DSL。
