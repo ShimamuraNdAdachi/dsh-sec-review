@@ -141,4 +141,8 @@ node scripts/sync-preset.mjs <path-to-standard/agent.cordis.yml>   # 重新同�
 
 ## 许可与来源
 
-提示词逐字提取自 [protectai/vulnhuntr](https://github.com/protectai/vulnhuntr)（**AGPL-3.0**，作者 Dan McInerney、Marcello Salvati），因此本项目同样以 **AGPL-3.0-or-later** 发布，见 `LICENSE`。`src/prompts.json` 记录来源文件的 sha256，便于核对。
+提示词逐字提取自 [protectai/vulnhuntr](https://github.com/protectai/vulnhuntr)（**AGPL-3.0**，作者 Dan McInerney、Marcello Salvati）：7 类模板 + 5 个共享提示词共 **14,364 字符**，另含 32 条绕过 payload。上游只给出 AGPL v3 文本、**没有** "or any later version" 声明，所以本项目以 **AGPL-3.0-only**（而不是 `or-later`）发布 —— 演绎作品无权替上游授予「日后可改用更高版本」的许可。许可全文见 `LICENSE`。
+
+逐字复制的**确切范围**、上游 `prompts.py` 的 sha256、以及「未修改上游任何文件」的说明见 [`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md)；`src/prompts.json` 内同样记录了来源、sha256 与各项字符数（`stats`），可自行核对。
+
+> **免责声明**：本项目为独立作品，**与 Protect AI 及其 VulnHuntr 作者无关联，亦未获其赞助或背书**；名称 "VulnHuntr" 仅用于指明提示词来源与方法论出处。
