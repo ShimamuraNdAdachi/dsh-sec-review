@@ -147,4 +147,6 @@ node scripts/sync-preset.mjs <path-to-standard/agent.cordis.yml>   # 重新同�
 
 本项目还有**第二个上游**：`preset/agent.cordis.yml` 是 [DeepSeek Harness](https://github.com/deepseek-ai/deepseek-harness) 自带 `standard` 组合的逐字副本（尾部追加了 `security-review` 一行），DeepSeek Harness 以 **MIT**（`Copyright (c) 2026 DeepSeek`）发布。MIT 允许再许可，所以把它纳入本仓库的 AGPL 整体分发是允许的；按 MIT 要求，其版权与许可声明已完整保留在 `THIRD_PARTY_NOTICES.md`。该文件本身对接收者仍然可按 MIT 使用。
 
+本项目**自有部分**（Cordis 插件、提取/构建/安装脚本、测试与文档）的著作权归 **ShimamuraNdAdachi** 所有（`Copyright (C) 2026 ShimamuraNdAdachi`）；上游部分的著作权归其各自作者，逐项见 `THIRD_PARTY_NOTICES.md`。
+
 > **免责声明**：本项目为独立作品，**与 Protect AI、其 VulnHuntr 作者以及 DeepSeek 均无关联，亦未获其赞助或背书**；名称 "VulnHuntr" 仅用于指明提示词来源与方法论出处，"DeepSeek Harness" 仅用于指明被复制的组合文件出处。
